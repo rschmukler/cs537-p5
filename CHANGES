@@ -1,0 +1,96 @@
+commit a69d98855d438dcd288126af5dd2c19dfb6b0147
+Author: Aaron Brown <this.aaron@gmail.com>
+Date:   Wed Oct 5 15:15:06 2011 -0700
+
+    use long options for ld and add doc to makefile
+
+commit fac9c8beca9b077c573982ae3a3150f7b9f2ac2e
+Author: Aaron Brown <this.aaron@gmail.com>
+Date:   Wed Oct 5 14:26:12 2011 -0700
+
+    move syscall function declarations to syscall.h so compiler can catch
+    definitinos that don't match
+
+commit 1551121a5d3edea97f67f3ed9fae56a11b2ca3a4
+Author: Aaron Brown <this.aaron@gmail.com>
+Date:   Sun Sep 25 12:48:53 2011 -0700
+
+    fix sbrk test
+
+commit 86f34a4a7c2914a1c444d9871a33c3899c1d373a
+Author: abrown <abrown@aaron-laptop.(none)>
+Date:   Sat Sep 10 15:25:31 2011 -0500
+
+    add tester to makefile
+
+commit be890e8c3b9890b78facfa6e0f5a9b173aa83539
+Author: Aaron Brown <abrown@cs.wisc.edu>
+Date:   Thu Sep 8 13:35:53 2011 -0500
+
+    add tester placeholder
+
+commit ae07117c30e6937095c6b2ef0efb067af6ae9ead
+Author: Aaron Brown <abrown@cs.wisc.edu>
+Date:   Wed Sep 7 13:29:24 2011 -0500
+
+    local qemu path
+
+commit 28b01ea5bf52edcdb75a4b2369f4573784d35670
+Author: Aaron Brown <abrown@cs.wisc.edu>
+Date:   Wed Sep 7 13:17:36 2011 -0500
+
+    Makefile clarifications
+
+commit e65bf146cfa273f58ba5b3054d5be67bbd1f990f
+Author: Aaron Brown <abrown@cs.wisc.edu>
+Date:   Wed Sep 7 13:00:47 2011 -0500
+
+    compile mkfs as 64bit, add NULL def
+
+commit fa1eea6bf4bc6e06be5700821e41182b1dfe948b
+Author: Aaron Brown <abrown@cs.wisc.edu>
+Date:   Sat Jul 23 21:52:22 2011 -0700
+
+    recursive mkfs
+
+commit e0e28a93e206a48bbe72d4c77020429ed7500e86
+Author: Aaron Brown <abrown@cs.wisc.edu>
+Date:   Tue Jul 5 20:09:11 2011 -0700
+
+    comments
+
+commit eb604dcbb5f2c3c6ae5ec7a82a8a95a0bb769fa3
+Author: Aaron Brown <abrown@cs.wisc.edu>
+Date:   Thu Jun 30 22:10:16 2011 -0700
+
+    0 is not a valid syscall
+
+commit 7eb57492b964cb60d29fcf7be610b275c0c52f60
+Author: Aaron Brown <abrown@cs.wisc.edu>
+Date:   Sun Jun 26 18:44:59 2011 -0700
+
+    load bootblock symbols in gdb. added basic help msg to gdb
+
+commit 3dd9fa58ae92b36f506605b5ba48181ea47bb702
+Author: Aaron Brown <abrown@cs.wisc.edu>
+Date:   Sun Jun 26 17:22:22 2011 -0700
+
+    fix rare bug resulting in panic on boot
+
+commit 1ad16e1b1978809671fd8e3804fd85d6e1d63f4d
+Author: Aaron Brown <abrown@cs.wisc.edu>
+Date:   Sun Jun 26 15:20:04 2011 -0700
+
+    cleanup build and makefile
+
+commit 8fa0ee5c103fa567f65813530a224fc39b15c3ce
+Author: Aaron Brown <abrown@cs.wisc.edu>
+Date:   Sun Jun 26 10:45:34 2011 -0700
+
+    added git ignore rules for files built using make
+
+commit 1c94fb2f671d4fe142e9058fd81e38e669517f67
+Author: Aaron Brown <abrown@cs.wisc.edu>
+Date:   Thu Jun 23 20:05:18 2011 -0700
+
+    xv6-rev5
