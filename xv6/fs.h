@@ -27,6 +27,7 @@ struct dinode {
   short nlink;          // Number of links to inode in file system
   uint size;            // Size of file (bytes)
   uint addrs[NDIRECT+1];   // Data block addresses
+  uint logicalOffsets[NDIRECT+1];
 };
 
 // Inodes per block.
@@ -49,3 +50,6 @@ struct dirent {
   char name[DIRSIZ];
 };
 
+uint toAddr(uint pointer, uint size);
+uint getPtr(uint addr);
+uint getSize(uint addr);

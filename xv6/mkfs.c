@@ -81,7 +81,7 @@ mkfs(int nblocks, int ninodes, int size) {
   printf("used %d (bit %d ninode %zu) free %u total %d\n", usedblocks,
          bitblocks, ninodes/IPB + 1, freeblock, nblocks+usedblocks);
 
-  assert(nblocks + usedblocks == size);
+  //assert(nblocks + usedblocks == size);
 
   for(i = 0; i < nblocks + usedblocks; i++)
     wsect(i, zeroes);
@@ -208,7 +208,7 @@ main(int argc, char *argv[])
     exit(1);
   }
 
-  assert((512 % sizeof(struct dinode)) == 0);
+  //assert((512 % sizeof(struct dinode)) == 0);
   assert((512 % sizeof(struct xv6_dirent)) == 0);
 
   fsfd = open(argv[1], O_RDWR|O_CREAT|O_TRUNC, 0666);

@@ -75,6 +75,48 @@ balloc(uint dev)
   panic("balloc: out of blocks");
 }
 
+//Named in part because it takes the first X blocks it can find contiguously, with a max of 2^8 (which is
+// the max an extend can support.) You never know what you'll get.
+static uint
+boxOfChocolatesballoc(uint dev)
+{
+  int b, bi, m;
+  struct buf *bp;
+  struct superblock sb;
+
+  uint toReturn = -1;
+  uint size = 0;
+
+  bp = 0;
+  readsb(dev, &sb);
+
+  for(b = 0; b < sb.size; b+= BPB)
+  {
+    bp = bread(dev, BBLOCK(b, sb.ninodes));
+    for(bi = 0; bi < BPB; bi++){
+      m = 1 << (bi & 8);
+      if((bp->data[bi/8] & m) == 0 && size < 255){  // Is block free?
+        bp->data[bi/8] |= m;  // Mark block in use on disk.
+        bwrite(bp);
+        brelse(bp);
+        if(toReturn == -1)
+        {
+          toReturn = b + bi;
+        }
+        size +=1;
+      }else if(toReturn != -1)
+        return toAddr(toReturn, size);
+    }
+    brelse(bp);
+  }
+  if(toReturn < 0){
+    panic("balloc: out of blocks");
+  }else{
+    return toAddr(toReturn, size);
+  }
+
+}
+
 // Free a disk block.
 static void
 bfree(int dev, uint b)
@@ -182,6 +224,7 @@ iupdate(struct inode *ip)
   dip->nlink = ip->nlink;
   dip->size = ip->size;
   memmove(dip->addrs, ip->addrs, sizeof(ip->addrs));
+  memmove(dip->logicalOffsets, ip->logicalOffsets, sizeof(ip->logicalOffsets));
   bwrite(bp);
   brelse(bp);
 }
@@ -257,6 +300,7 @@ ilock(struct inode *ip)
     ip->nlink = dip->nlink;
     ip->size = dip->size;
     memmove(ip->addrs, dip->addrs, sizeof(ip->addrs));
+    memmove(ip->logicalOffsets, dip->logicalOffsets, sizeof(ip->logicalOffsets));
     brelse(bp);
     ip->flags |= I_VALID;
     if(ip->type == 0)
@@ -322,28 +366,70 @@ bmap(struct inode *ip, uint bn)
   uint addr, *a;
   struct buf *bp;
 
-  if(bn < NDIRECT){
-    if((addr = ip->addrs[bn]) == 0)
-      ip->addrs[bn] = addr = balloc(ip->dev);
-    return addr;
-  }
-  bn -= NDIRECT;
-
-  if(bn < NINDIRECT){
-    // Load indirect block, allocating if necessary.
-    if((addr = ip->addrs[NDIRECT]) == 0)
-      ip->addrs[NDIRECT] = addr = balloc(ip->dev);
-    bp = bread(ip->dev, addr);
-    a = (uint*)bp->data;
-    if((addr = a[bn]) == 0){
-      a[bn] = addr = balloc(ip->dev);
-      bwrite(bp);
+  if(ip->type == T_EXTENT)
+  {
+    int n = 0;
+    for(; n < NDIRECT; ++n)
+    {
+      if(ip->addrs[n] == 0)
+      {
+        ip->addrs[n] = addr = boxOfChocolatesballoc(ip->dev);
+        if(n > 0){
+          ip->logicalOffsets[n] = ip->logicalOffsets[n-1] + getSize(ip->addrs[n-1]);
+        }
+        else{
+          ip->logicalOffsets[n] = 0;
+        }
+        break;
+      }else {
+        uint size = getSize(ip->addrs[n]);
+        if(ip->logicalOffsets[n] <= bn && ip->logicalOffsets[n] + size > bn)
+          return getPtr(ip->addrs[n]) + (bn - ip->logicalOffsets[n])*BSIZE;
+      }
     }
-    brelse(bp);
     return addr;
-  }
+  }else {
+    if(bn < NDIRECT){
+      if((addr = ip->addrs[bn]) == 0)
+        ip->addrs[bn] = addr = balloc(ip->dev);
+      return addr;
+    }
+    bn -= NDIRECT;
 
-  panic("bmap: out of range");
+    if(bn < NINDIRECT){
+      // Load indirect block, allocating if necessary.
+      if((addr = ip->addrs[NDIRECT]) == 0)
+        ip->addrs[NDIRECT] = addr = balloc(ip->dev);
+      bp = bread(ip->dev, addr);
+      a = (uint*)bp->data;
+      if((addr = a[bn]) == 0){
+        a[bn] = addr = balloc(ip->dev);
+        bwrite(bp);
+      }
+      brelse(bp);
+      return addr;
+    }
+
+    panic("bmap: out of range");
+  }
+}
+
+uint
+toAddr(uint pointer, uint size)
+{
+  return ((pointer << 8) | size);
+}
+
+uint
+getPtr(uint addr)
+{
+  return ((addr & ~0xff) >> 8);
+}
+
+uint
+getSize(uint addr)
+{
+  return (addr & 0xff);
 }
 
 // Truncate inode (discard contents).
@@ -356,25 +442,38 @@ itrunc(struct inode *ip)
   struct buf *bp;
   uint *a;
 
-  for(i = 0; i < NDIRECT; i++){
-    if(ip->addrs[i]){
-      bfree(ip->dev, ip->addrs[i]);
-      ip->addrs[i] = 0;
+  if(ip->type == T_EXTENT)
+  {
+    for(i = 0; i < NDIRECT; i++)
+    {
+      if(ip->addrs[i])
+      {
+        for(j = 0; j < getSize(ip->addrs[i]); ++j)
+        {
+          bfree(ip->dev, getPtr(ip->addrs[i]) + j*BSIZE);
+        }
+      }
+    }
+  }else {
+    for(i = 0; i < NDIRECT; i++){
+      if(ip->addrs[i]){
+        bfree(ip->dev, ip->addrs[i]);
+        ip->addrs[i] = 0;
+      }
+    }
+    
+    if(ip->addrs[NDIRECT]){
+      bp = bread(ip->dev, ip->addrs[NDIRECT]);
+      a = (uint*)bp->data;
+      for(j = 0; j < NINDIRECT; j++){
+        if(a[j])
+          bfree(ip->dev, a[j]);
+      }
+      brelse(bp);
+      bfree(ip->dev, ip->addrs[NDIRECT]);
+      ip->addrs[NDIRECT] = 0;
     }
   }
-  
-  if(ip->addrs[NDIRECT]){
-    bp = bread(ip->dev, ip->addrs[NDIRECT]);
-    a = (uint*)bp->data;
-    for(j = 0; j < NINDIRECT; j++){
-      if(a[j])
-        bfree(ip->dev, a[j]);
-    }
-    brelse(bp);
-    bfree(ip->dev, ip->addrs[NDIRECT]);
-    ip->addrs[NDIRECT] = 0;
-  }
-
   ip->size = 0;
   iupdate(ip);
 }
@@ -388,6 +487,7 @@ stati(struct inode *ip, struct stat *st)
   st->type = ip->type;
   st->nlink = ip->nlink;
   st->size = ip->size;
+  st->addrs = ip->addrs;
 }
 
 // Read data from inode.

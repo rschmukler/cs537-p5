@@ -294,7 +294,7 @@ sys_open(void)
     f->off = 0;
     f->readable = !(omode & O_WRONLY);
     f->writable = (omode & O_WRONLY) || (omode & O_RDWR);
-    
+    return fd;
   }else {
     if(omode & O_CREATE){
       if((ip = create(path, T_FILE, 0, 0)) == 0)

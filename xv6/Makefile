@@ -66,7 +66,8 @@ UPROGS = \
 	tester\
 	usertests\
 	wc\
-	zombie
+	zombie\
+	printextent
 
 UOBJS = $(UPROGS:%=%.o)
 
