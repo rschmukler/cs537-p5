@@ -95,6 +95,34 @@ sys_close(void)
 }
 
 int
+sys_lseek(void)
+{
+  struct file *f;
+  int offset;
+  if(argfd(0, 0, &f) < 0 || argint(1, &offset) < 0)
+    return -1;
+    
+
+  int newBlocks = offset - f->ip->size;
+  if(newBlocks > 0)
+  {
+    while(newBlocks > 0)
+    {
+      int size = newBlocks%BSIZE;
+      if(size ==0)
+        size = BSIZE;
+      char buf[size];
+      filewrite(f, buf, size);
+      newBlocks -= size;
+    }
+  }
+  ilock(f->ip);
+  f->off = offset;
+  iunlock(f->ip);
+  return offset;
+}
+
+int
 sys_fstat(void)
 {
   struct file *f;
@@ -271,7 +299,6 @@ sys_open(void)
       if((ip = create(path, T_EXTENT, 0, 0)) == 0)
         return -1;
     }else {
-      //TODO: Code for actually opening an extent
       if((ip = namei(path)) == 0) // get inode for parent of path
         return -1;
       ilock(ip);

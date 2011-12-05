@@ -62,12 +62,12 @@ UPROGS = \
 	mkdir\
 	rm\
 	sh\
+	stat\
 	stressfs\
 	tester\
 	usertests\
 	wc\
 	zombie\
-	printextent
 
 UOBJS = $(UPROGS:%=%.o)
 

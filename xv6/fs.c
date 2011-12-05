@@ -75,48 +75,6 @@ balloc(uint dev)
   panic("balloc: out of blocks");
 }
 
-//Named in part because it takes the first X blocks it can find contiguously, with a max of 2^8 (which is
-// the max an extend can support.) You never know what you'll get.
-static uint
-boxOfChocolatesballoc(uint dev)
-{
-  int b, bi, m;
-  struct buf *bp;
-  struct superblock sb;
-
-  uint toReturn = -1;
-  uint size = 0;
-
-  bp = 0;
-  readsb(dev, &sb);
-
-  for(b = 0; b < sb.size; b+= BPB)
-  {
-    bp = bread(dev, BBLOCK(b, sb.ninodes));
-    for(bi = 0; bi < BPB; bi++){
-      m = 1 << (bi & 8);
-      if((bp->data[bi/8] & m) == 0 && size < 255){  // Is block free?
-        bp->data[bi/8] |= m;  // Mark block in use on disk.
-        bwrite(bp);
-        brelse(bp);
-        if(toReturn == -1)
-        {
-          toReturn = b + bi;
-        }
-        size +=1;
-      }else if(toReturn != -1)
-        return toAddr(toReturn, size);
-    }
-    brelse(bp);
-  }
-  if(toReturn < 0){
-    panic("balloc: out of blocks");
-  }else{
-    return toAddr(toReturn, size);
-  }
-
-}
-
 // Free a disk block.
 static void
 bfree(int dev, uint b)
@@ -368,26 +326,34 @@ bmap(struct inode *ip, uint bn)
 
   if(ip->type == T_EXTENT)
   {
+    //First Check to see if it exists
     int n = 0;
-    for(; n < NDIRECT; ++n)
+    while(ip->addrs[n])
     {
-      if(ip->addrs[n] == 0)
-      {
-        ip->addrs[n] = addr = boxOfChocolatesballoc(ip->dev);
-        if(n > 0){
-          ip->logicalOffsets[n] = ip->logicalOffsets[n-1] + getSize(ip->addrs[n-1]);
-        }
-        else{
-          ip->logicalOffsets[n] = 0;
-        }
-        break;
-      }else {
-        uint size = getSize(ip->addrs[n]);
-        if(ip->logicalOffsets[n] <= bn && ip->logicalOffsets[n] + size > bn)
-          return getPtr(ip->addrs[n]) + (bn - ip->logicalOffsets[n])*BSIZE;
-      }
+      //If offset <= bn < offset + size
+      if(ip->logicalOffsets[n] <= bn && ip->logicalOffsets[n] + getSize(ip->addrs[n]) > bn)
+        return getPtr(ip->addrs[n]) + (bn - ip->logicalOffsets[n]);
+      ++n;
     }
-    return addr;
+    //Doesn't exist, so create it
+    uint newBlockAddress = balloc(ip->dev);
+    if(n > 0)
+    {
+      --n;
+      //Check block and return if we find we can add to extent
+      if((getPtr(ip->addrs[n]) + (getSize(ip->addrs[n])) == newBlockAddress) && getSize(ip->addrs[n]) < 255)
+      {
+        ip->addrs[n] = toAddr(getPtr(ip->addrs[n]), getSize(ip->addrs[n]) + 1);
+        return newBlockAddress;
+      }
+      ++n;
+    }
+
+    //Create new block at n
+    ip->addrs[n] = toAddr(newBlockAddress, 1);
+    ip->logicalOffsets[n] = bn;
+    return newBlockAddress;
+
   }else {
     if(bn < NDIRECT){
       if((addr = ip->addrs[bn]) == 0)
@@ -487,7 +453,11 @@ stati(struct inode *ip, struct stat *st)
   st->type = ip->type;
   st->nlink = ip->nlink;
   st->size = ip->size;
-  st->addrs = ip->addrs;
+  int x =0;
+  for(; x < 13; ++x)
+  {
+    st->addrs[x] = ip->addrs[x];
+  }
 }
 
 // Read data from inode.

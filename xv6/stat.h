@@ -9,5 +9,5 @@ struct stat {
   uint ino;    // Inode number on device
   short nlink; // Number of links to file
   uint size;   // Size of file in bytes
-  uint *addrs;
+  uint addrs[13];
 };

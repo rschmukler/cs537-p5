@@ -6,20 +6,35 @@
 
 void printStat(struct stat *statastic);
 void makeExtent(char* path);
+void testlseek(char* path);
 
 int main(int argc, char* argv[])
 {
-	if(argc != 2)
+	if(argc == 1)
 	{
-		makeExtent("Test_Extent");
+		makeExtent("test_extent1");
+		//testlseek("a_l_seeked_file");
 		exit();
-	}else {
+	}else if(argc == 2){
 		int fd = open(argv[1], O_RDONLY);
 		struct stat statastic;
 		fstat(fd, &statastic);
 		printStat(&statastic);
-		exit();
+		
 	}
+
+	exit();
+}
+
+void testlseek(char* path)
+{
+	int fd = open(path, O_CREATE | O_EXTENT);
+	char firstString[] = "Here's something cool followed by some space";
+	write(fd, firstString, sizeof(firstString));
+	lseek(fd, 200);
+	char secondString[] = "I hope something was behind me.";
+	write(fd, secondString, sizeof(secondString));
+	close(fd);
 }
 
 void makeExtent(char* path)
@@ -36,9 +51,9 @@ void printStat(struct stat *statastic)
 	if(statastic->type == T_EXTENT)
 	{
 		int n = 0;
-		while(statastic->addrs[n])
+		while(statastic->addrs[n] && n < 13)
 		{
-			printf(1, "\tAddress: %x\n\t\tSize: %d bytes\n", getPtr(statastic->addrs[n]), getSize(statastic->addrs[n]));
+			printf(1, "\tAddress: %x\n\t\tSize: %d blocks\n", getPtr(statastic->addrs[n]), getSize(statastic->addrs[n]));
 			++n;
 		}
 	}
@@ -53,11 +68,13 @@ toAddr(uint pointer, uint size)
 uint
 getPtr(uint addr)
 {
+  printf(1, "Getting ptr\n");
   return ((addr & ~0xff) >> 8);
 }
 
 uint
 getSize(uint addr)
 {
+  printf(1, "Getting size\n");
   return (addr & 0xff);
 }
